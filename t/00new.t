@@ -17,5 +17,5 @@ print "ok 4\n" if near($dea->{sum_of_squared_data} , 0);
 print "ok 5\n" if near($dea->{previous_time}       , -1e38);
 print "ok 6\n" if near($dea->alpha                 , 0.9);
 print "ok 7\n" if near($dea->max_gap               , 10);
-print "ok 8\n" if near($dea->max_weight            , 1 - 0.9 ** 10);
+print "ok 8\n" if near($dea->{max_weight}          , 1 - 0.9 ** 10);
 

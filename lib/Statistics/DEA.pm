@@ -2,7 +2,7 @@ package Statistics::DEA;
 
 use vars qw($VERSION);
 
-$VERSION = '0.02';
+$VERSION = '0.03';
 
 use strict;
 use warnings;
@@ -40,17 +40,17 @@ gaps.  The algorithm also avoids initial value bias and postgap bias.
 
 Creates a new (potentially discontiguous) exponential average object.
 
-The $alpha is the exponential decay of I<data>: from zero (inclusive)
+The I<$alpha> is the exponential decay of I<data>: from zero (inclusive)
 to one (exclusive): the lower values cause the effect of data to decay
 more quickly, the higher values cause the effect of data to decay more
 slowly . Specifically, weights on older data decay exponentially with a
-characteristic time of -1/ln(alpha).
+characteristic time of I<-1/log(alpha)> (I<log> being the natural logarithm).
 
-The $max_gap is the maximum I<time> gap after which the data is
+The I<$max_gap> is the maximum I<time> gap after which the data is
 considered lost.  If the time interval between updates is I<dt>,
-using a $max_gap of I<N*dt> will cause each update to fill in up to
+using a I<$max_gap> of I<N*dt> will cause each update to fill in up to
 I<N-1> of any preceeding skipped updates with the current data value.
-Use a $max_gap of I<dt> to prevent such filling.
+Use a I<$max_gap> of I<dt> to prevent such filling.
 
 =head2 update
 
@@ -84,8 +84,8 @@ Functionally equivalent alias std_dev() is also available.
 
 Return the current I<completeness>: how well based the current average
 and standard deviation are on actual data.  Any time intervals between
-updates greater than $max_gap reduce this value.  A series of updates
-at time intervals of less than $max_gap will gradually increase this
+updates greater than I<$max_gap> reduce this value.  A series of updates
+at time intervals of less than I<$max_gap> will gradually increase this
 value from its initial, minimum, value of 0 to its maximum value of 1.
 
 The $time should represent the current time. It must be >= the time of
@@ -103,7 +103,7 @@ Set the exponential decay of data.
 
 =head2 max_gap
 
-    my $alpha = $dea->alpha();
+    my $alpha = $dea->max_gap();
 
 Return the current maximum time gap.
 
@@ -122,10 +122,12 @@ it under the same terms as Perl itself.
 
 =head1 ACKNOWLEDGEMENT
 
-The idea and the code are from the September 1998 Doctor Dobb's Journal
-Algorithm Alley article "Discontiguous Exponential Averaging" by John
-C. Gunther, used with permission.  This is just a Perlification of the
-code, all errors in transcription are solely mine.
+The idea and the code are from the September 1998 Doctor Dobb's
+Journal Algorithm Alley article "Discontiguous Exponential Averaging"
+by John C. Gunther, used with permission.  JCG also provided valuable
+feedback for the documentation -- and even fixed a bug in the code
+without knowing Perl as such.  This is just a Perlification of the
+pseudocode in the article, all errors in transcription are solely mine.
 
 =cut
 
@@ -162,7 +164,7 @@ sub new {
     $dea->{sum_of_weights}              = 0;
     $dea->{sum_of_data}                 = 0;
     $dea->{sum_of_squared_data}         = 0;
-    $dea->{previous_time}               = -1e38; # -Infinity
+    $dea->{previous_time}               = -1e38; # about IEEE -Infinity
     $dea->alpha($alpha);
     $dea->max_gap($max_gap);
     return $dea;
