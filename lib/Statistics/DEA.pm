@@ -2,7 +2,7 @@ package Statistics::DEA;
 
 use vars qw($VERSION);
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 use strict;
 use warnings;
@@ -31,8 +31,8 @@ Statistics::DEA - Discontiguous Exponential Averaging
 =head1 DESCRIPTION
 
 The Statistics::DEA module can be used to compute exponentially
-decaying averages even when the data has gaps.  The algorithm also
-avoids initial value bias and postgap bias.
+decaying averages and standard deviations even when the data has
+gaps.  The algorithm also avoids initial value bias and postgap bias.
 
 =head2 new
 
@@ -43,10 +43,14 @@ Creates a new (potentially discontiguous) exponential average object.
 The $alpha is the exponential decay of I<data>: from zero (inclusive)
 to one (exclusive): the lower values cause the effect of data to decay
 more quickly, the higher values cause the effect of data to decay more
-slowly.
+slowly . Specifically, weights on older data decay exponentially with a
+characteristic time of -1/ln(alpha).
 
 The $max_gap is the maximum I<time> gap after which the data is
-considered lost (decay should bring the average to zero).
+considered lost.  If the time interval between updates is I<dt>,
+using a $max_gap of I<N*dt> will cause each update to fill in up to
+I<N-1> of any preceeding skipped updates with the current data value.
+Use a $max_gap of I<dt> to prevent such filling.
 
 =head2 update
 
@@ -76,10 +80,16 @@ Functionally equivalent alias std_dev() is also available.
 
 =head2 completeness
 
-    my $completeness = $dea->completeness();
+    my $completeness = $dea->completeness($time);
 
 Return the current I<completeness>: how well based the current average
-and standard deviation are on actual data.  Any gaps reduce this value.
+and standard deviation are on actual data.  Any time intervals between
+updates greater than $max_gap reduce this value.  A series of updates
+at time intervals of less than $max_gap will gradually increase this
+value from its initial, minimum, value of 0 to its maximum value of 1.
+
+The $time should represent the current time. It must be >= the time of
+the last update.
 
 =head2 alpha
 
@@ -105,9 +115,14 @@ Set the maximum time gap.
 
 Jarkko Hietaniemi <jhi@iki.fi>
 
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
+
 =head1 ACKNOWLEDGEMENT
 
-The idea and the code is from the September 1998 Doctor Dobb's Journal
+The idea and the code are from the September 1998 Doctor Dobb's Journal
 Algorithm Alley article "Discontiguous Exponential Averaging" by John
 C. Gunther, used with permission.  This is just a Perlification of the
 code, all errors in transcription are solely mine.
@@ -117,18 +132,18 @@ code, all errors in transcription are solely mine.
 sub alpha {
     my $dea = shift;
     $dea->{alpha} = shift if @_;
-    $dea->max_weight();
+    $dea->_max_weight();
     return $dea->{alpha};
 }
 
 sub max_gap {
     my $dea = shift;
     $dea->{max_gap} = shift if @_;
-    $dea->max_weight();
+    $dea->_max_weight();
     return $dea->{max_gap};
 }
 
-sub max_weight {
+sub _max_weight { # Internal use only.
     my $dea = shift;
     return unless defined $dea->{alpha} && defined $dea->{max_gap};
     $dea->{max_weight} = 1 - $dea->{alpha} ** $dea->{max_gap};
@@ -171,12 +186,12 @@ sub update {
 	$weight_reduction_factor * $dea->{sum_of_data} +
 	    $new_data_weight * $new_data;
     $dea->{sum_of_squared_data} =
-	$weight_reduction_factor * $dea->{sum_of_data} +
+	$weight_reduction_factor * $dea->{sum_of_squared_data} +
 	    $new_data_weight * $new_data * $new_data;
     $dea->{previous_time} = $time;
 }
 
-sub _average {
+sub _average { # Internal use only.
     my $dea = shift;
     return $dea->{sum_of_data} / $dea->{sum_of_weights};
 }
@@ -206,8 +221,8 @@ sub completeness {
     croak __PACKAGE__, "::completeness: need one argument: time"
 	unless @_ == 1;
     my $time = shift;
-    croak __PACKAGE__, "::completeness: Not previous_time $dea->{previous_time} < time $time"
-	unless $dea->{previous_time} < $time;
+    croak __PACKAGE__, "::completeness: Not previous_time $dea->{previous_time} <= time $time"
+	unless $dea->{previous_time} <= $time;
     return
 	$dea->{alpha} ** ($time - $dea->{previous_time}) *
 	    $dea->{sum_of_weights};
