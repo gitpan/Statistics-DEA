@@ -1,0 +1,5 @@
+Makefile.PL
+MANIFEST
+lib/Statistics/DEA.pm
+t/01new.t
+t/02single.t
